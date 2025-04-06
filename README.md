@@ -113,9 +113,14 @@ distance_meters <- distm(c(origin_coords$Long, origin_coords$Lat), c(recent_coor
 
 distance_miles <- distance_meters * 0.000621371
 
-
 print(sprintf("%s is %.2f miles away from %s, %s.",
               most_recent_country,
               distance_miles,
               "Origin City",  # replace with actual city if known or use origin_country
               origin_country))
+
+Which area of the world currently has the lowest risk score (if more than one, display the one with the most confirmations)? 
+Which area of the world currently has the highest risk score (if more than one, display the one with the most confirmations)? 
+How do risk scores in these areas compare to global risk score? 
+Why might it be helpful to calculate metrics like risk scores for different areas of the world and what would their limitations be (what assumptions does risk score make and what important variables might be left out)? 
+COVID procedures varied around the world like in Australia where they are an island that can better control the population and COVID. The procedures would them mean that certain areas have different risk scores. Additionally socioeconomic factors play a pivotal role. In areas where communities have a low socioeconomic area they are likelier to display higher risk scores because people may not have the means to get access to good care, may have to work which would increase their risk of getting COVID, etc. 
