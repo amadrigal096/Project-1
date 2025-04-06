@@ -4,8 +4,13 @@ Team Members: Alejandra and Wesley
 
 Summary: This is Project 1 where we are analyzing: Data for 2019 Novel Coronavirus is operated by the John Hopkins University Center for Systems Science and Engineering (JHU CSSE). Data includes daily time series CSV summary tables, including confirmations, recoveries, and deaths. Country/region are countries/regions hat conform to World Health Organization (WHO). Lat and Long refer to coordinates references for the user. Date fields are stored in MM/DD/YYYY format.For this project, we will use global data sets for COVID-19 associated confirmations and deaths.
 "Initialize README with group members"
-***************I'm up to Objective 3***********************************************
+***************I'm up to Objective 4***********************************************
 
+---
+title: "Project 1-New"
+author: "Alejandra and Wes"
+date: "2025-04-05"
+output: html_document
 ---
 # Libraries
 if (!require("dplyr", quietly = TRUE)) install.packages("dplyr")
@@ -88,8 +93,9 @@ if (!require("geosphere", quietly = TRUE)) install.packages("geosphere")
 library(geosphere)
 
 
-origin_country <- "Origin Country"  
-most_recent_country <- "Most Recent Country" \
+origin_country <- origin$Country_Region  
+most_recent_country <- most_recent_country  
+
 
 
 origin_coords <- confirmed_cases %>% 
@@ -100,3 +106,16 @@ origin_coords <- confirmed_cases %>%
 recent_coords <- confirmed_cases %>%
   filter(`Country/Region` == most_recent_country) %>%
   summarise(Lat = mean(Lat, na.rm = TRUE), Long = mean(Long, na.rm = TRUE))
+#to miles and exact distance
+# Calculate distance in meters
+distance_meters <- distm(c(origin_coords$Long, origin_coords$Lat), c(recent_coords$Long, recent_coords$Lat), fun = distHaversine)
+
+
+distance_miles <- distance_meters * 0.000621371
+
+
+print(sprintf("%s is %.2f miles away from %s, %s.",
+              most_recent_country,
+              distance_miles,
+              "Origin City",  # replace with actual city if known or use origin_country
+              origin_country))
