@@ -7,6 +7,8 @@ Summary: This is Project 1 where we are analyzing: Data for 2019 Novel Coronavir
 ***************I'm up to Objective 4***********************************************
 
 ---
+
+---
 title: "Project 1-New"
 author: "Alejandra and Wes"
 date: "2025-04-05"
@@ -16,15 +18,19 @@ output: html_document
 if (!require("dplyr", quietly = TRUE)) install.packages("dplyr")
 if (!require("readr", quietly = TRUE)) install.packages("readr")
 if (!require("tidyr", quietly = TRUE)) install.packages("tidyr")
-
+if (!require("knitr", quietly = TRUE)) install.packages("knitr")
 # Load the libraries if not already 
 library(dplyr)
 library(readr)
 library(tidyr)
+library(knitr)
 
-# Files COVID cases and deaths
-covid_data_path <- "data/time_series_covid19_confirmed_global.csv"
-deaths_data_path <- "data/time_series_covid19_deaths_global.csv"
+covid_data_path <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+deaths_data_path <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
+
+# Files COVID cases and deaths-originally used but they kept exiting me out//had me link to ~/OneDrive/Documents/Project-1 
+#covid_data_path <- "data/time_series_covid19_confirmed_global.csv"
+#deaths_data_path <- "data/time_series_covid19_deaths_global.csv"
 
 # Read the data files
 covid_data <- read_csv(covid_data_path)
@@ -35,23 +41,25 @@ head(covid_data)
 head(deaths_cases)
 
 # Objective 1: 
-first_date_column <- 2  
+#5 = first date column in excel sheets
+date_columns <- colnames(covid_data)[5:ncol(covid_data)]
+first_date_column <- 5
 
-confirmed_cases$first_day_sum <- rowSums(confirmed_cases[, first_date_column, drop = FALSE])
-deaths_cases$first_day_sum <- rowSums(deaths_cases[, first_date_column, drop = FALSE])
+# Calculate sums first day of all rehions 
+covid_data$first_day_sum <- rowSums(covid_data[, first_date_column, drop = FALSE], na.rm = TRUE)
+deaths_cases$first_day_sum <- rowSums(deaths_cases[, first_date_column, drop = FALSE], na.rm = TRUE)
 
-# Combine the data for the first day to identify the origin
+# Combine the data to identify the origin
 combined_first_day <- data.frame(
-  Country_Region = confirmed_cases$`Country/Region`,
-  Sum_Confirmed = confirmed_cases$first_day_sum,
-  Sum_Deaths = deaths_cases$first_day_sum
+  Country_Region = covid_data$`Country/Region`,
+  Sum_Confirmed = covid_data$first_day_sum,
+  Sum_Deaths = deaths_cases$first_day_sum,
+  Total_Impact = covid_data$first_day_sum + deaths_cases$first_day_sum
 )
 
+origin <- combined_first_day[which.max(combined_first_day$Total_Impact),]
 
-combined_first_day$total_impact <- combined_first_day$Sum_Confirmed + combined_first_day$Sum_Deaths
 
-
-origin <- combined_first_day[which.max(combined_first_day$total_impact),]
 # Statement sentence
 if (origin$Country_Region == "China") {
   print(paste("The origin is likely China based on the data. It had", origin$Sum_Confirmed, "confirmed cases and", origin$Sum_Deaths, "deaths on the first recorded day."))
@@ -60,64 +68,104 @@ if (origin$Country_Region == "China") {
 }
 
 #Objective 2
-date_columns <- colnames(confirmed_cases)[2:ncol(confirmed_cases)]
 
-# Initialize variables to store the most recent date and location of the first case
+# Identify the most recent non-zero increase 
+
 most_recent_date <- NA
 most_recent_location <- NA
 most_recent_country <- NA
 
-# Loop through each date column to find the most recent first case
-for (i in 2:(ncol(confirmed_cases) - 1)) {
-  
-  for (j in 1:nrow(confirmed_cases)) {
-    if (confirmed_cases[j, i] == 0 && confirmed_cases[j, i + 1] > 0) {
-      most_recent_date <- colnames(confirmed_cases)[i + 1]
-      most_recent_location <- confirmed_cases[j, `Province/State`]
-      most_recent_country <- confirmed_cases[j, `Country/Region`]
-    }
+for (i in (ncol(covid_data)-1):5) {
+  day_changes <- which(covid_data[, i] == 0 & covid_data[, i+1] > 0)
+  if (length(day_changes) > 0) {
+    most_recent_date <- colnames(covid_data)[i+1]
+    most_recent_location <- covid_data$`Province/State`[day_changes]
+    most_recent_country <- covid_data$`Country/Region`[day_changes]
+    break  # Stop the loop once the most recent date is found
   }
 }
-
-# Using an if statement
-if (!is.na(most_recent_date)) {
-  message <- sprintf("The most recent area to report its first confirmed case was on %s in %s, %s.",
-                     most_recent_date, most_recent_location, most_recent_country)
-  print(message)
-} else {
-  print("No new first cases found in the dataset.")
-}
-#installgeosphere library for objective 3
+#Objective 3
+#installgeosphere library for objective 3 #miles=meters multiplied by 0.000621371 to be used later in this objective
 if (!require("geosphere", quietly = TRUE)) install.packages("geosphere")
 
 library(geosphere)
 
+    distance_miles <- distance_meters * 0.000621371 
+    print(sprintf("%s is %.2f miles away from %s, %s.",
+                  most_recent_country,
+                  distance_miles,
+                  origin$`Province/State`, 
+                  origin$Country_Region))
+if (all(!is.na(c(origin_coords$Lat, origin_coords$Long, recent_coords$Lat, recent_coords$Long)))) {
+    distance_meters <- distm(matrix(c(origin_coords$Long, origin_coords$Lat), nrow = 1),
+                             matrix(c(recent_coords$Long, recent_coords$Lat), nrow = 1),
+                             fun = distHaversine)
+} else {
+    print("Valid coordinates not available for distance calculation.")
+}
 
-origin_country <- origin$Country_Region  
-most_recent_country <- most_recent_country  
+#objective 4 
+#filter cruise ships first 
+valid_data <- covid_data %>%
+  filter(Lat != 0, Long != 0, !is.na(Lat), !is.na(Long))
+
+# Join confirmed cases with death cases
+data <- valid_data %>%
+  inner_join(deaths_cases, by = c("Province/State", "Country/Region", "Lat", "Long"))
+risk_scores <- data %>%
+  mutate(
+    Latest_Confirmed = as.numeric(.data[[ncol(.)-3]]),  
+    Latest_Deaths = as.numeric(.data[[ncol(.)]]),  
+    Risk_Score = (Latest_Deaths / Latest_Confirmed) * 100
+  ) %>%
+  filter(!is.na(Risk_Score), Latest_Confirmed > 0)
+#higher risk score area
+highest_risk <- risk_scores %>%
+  arrange(desc(Risk_Score), desc(Latest_Confirmed)) %>%
+  slice_head(n = 1)
+
+#lowest risk score
+lowest_risk <- risk_scores %>%
+  arrange(Risk_Score, desc(Latest_Confirmed)) %>%
+  slice_head(n = 1)
+#global risk score
+global_risk_score <- sum(risk_scores$Latest_Deaths, na.rm = TRUE) / sum(risk_scores$Latest_Confirmed, na.rm = TRUE) * 100
+
+print(paste("Highest risk area: ", highest_risk$`Country/Region`, "with a risk score of", highest_risk$Risk_Score))
+print(paste("Lowest risk area: ", lowest_risk$`Country/Region`, "with a risk score of", lowest_risk$Risk_Score))
+print(paste("Global risk score: ", global_risk_score))
+  
+  
+  
+#Objective 5
+
+# Latest confirmed cases for each country
+total_confirmed_by_country <- confirmed_cases %>%
+  group_by(`Country/Region`) %>%
+  summarise(Total_Confirmed = sum(as.numeric(.data[[ncol(.)]]), na.rm = TRUE))
+
+# Latest deaths for each country
+total_deaths_by_country <- deaths_cases %>%
+  group_by(`Country/Region`) %>%
+  summarise(Total_Deaths = sum(as.numeric(.data[[ncol(.)]]), na.rm = TRUE))
 
 
+# Top 5 countries by confirmed cases
+top_confirmed_countries <- total_confirmed_by_country %>%
+  arrange(desc(Total_Confirmed)) %>%
+  slice_head(n = 5)
 
-origin_coords <- confirmed_cases %>% 
-  filter(`Country/Region` == origin_country) %>%
-  summarise(Lat = mean(Lat, na.rm = TRUE), Long = mean(Long, na.rm = TRUE))
-
-# Extract coordinates for the most recent location with a first case
-recent_coords <- confirmed_cases %>%
-  filter(`Country/Region` == most_recent_country) %>%
-  summarise(Lat = mean(Lat, na.rm = TRUE), Long = mean(Long, na.rm = TRUE))
-#to miles and exact distance
-# Calculate distance in meters
-distance_meters <- distm(c(origin_coords$Long, origin_coords$Lat), c(recent_coords$Long, recent_coords$Lat), fun = distHaversine)
+# Top 5 countries by deaths
+top_deaths_countries <- total_deaths_by_country %>%
+  arrange(desc(Total_Deaths)) %>%
+  slice_head(n = 5)
 
 
-distance_miles <- distance_meters * 0.000621371
+kable_confirmed <- kable(top_confirmed_countries, format = "markdown", caption = "Top 5 Countries by Confirmed Cases")
+kable_deaths <- kable(top_deaths_countries, format = "markdown", caption = "Top 5 Countries by Deaths")
 
-print(sprintf("%s is %.2f miles away from %s, %s.",
-              most_recent_country,
-              distance_miles,
-              "Origin City",  # replace with actual city if known or use origin_country
-              origin_country))
+print(kable_confirmed)
+print(kable_deaths)
 
 Which area of the world currently has the lowest risk score (if more than one, display the one with the most confirmations)? 
 Which area of the world currently has the highest risk score (if more than one, display the one with the most confirmations)? 
